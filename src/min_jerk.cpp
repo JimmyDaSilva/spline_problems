@@ -52,7 +52,7 @@ int main(int argc, char** argv){
   std::cout<< coeffs <<std::endl;
   
   std::vector<double> t_vect, q_vect, v_vect, a_vect, j_vect;
-  for(double i = 0; i<=0.5; i +=0.01)
+  for(double i = 0; i<=tf; i +=0.01)
     t_vect.push_back(i);
     
   for(int i=0; i<t_vect.size();i++){
