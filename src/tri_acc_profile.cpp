@@ -6,26 +6,23 @@
 double j_max = 5;
 double v_max = 1;
 double period = 0.001;
-double qi = 0.0, qdi = .4, qddi = 0.0;  
-double qf = 2.0;
+double qi = 0, qdi =0.5, qddi = 0.0;  
+double qf = 2.0, qdf = 0.0, qddf = 0.0;
 
 namespace plt = matplotlibcpp;
 
-void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::vector<double>& v_vect, std::vector<double>& a_vect, std::vector<double>& j_vect, double T);
+void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::vector<double>& v_vect, std::vector<double>& a_vect, std::vector<double>& j_vect, double t_rise);
 
 int main(int argc, char** argv){
   ros::init(argc, argv, "tri_acc_profile");
   ros::NodeHandle nh;
   
-
-  
-  double T = 2*std::sqrt((v_max  -qdi)/j_max);
+  double t_rise = 2*std::sqrt((v_max-qdi)/j_max);
   
   std::vector<double> t_vect, q_vect, v_vect, a_vect, j_vect;
-  std::vector<double> t_ligne, value_ligne;
   
   // RISE CONCAVE
-  for(double i = 0; i<=T/2.0; i +=period)
+  for(double i = 0; i<=t_rise/2.0; i +=period)
     t_vect.push_back(i);
   
   int nb_rise_concave = t_vect.size();
@@ -41,7 +38,7 @@ int main(int argc, char** argv){
   double am = a_vect[t_vect.size()-1];
   double vh = v_vect[t_vect.size()-1];
   double sh = q_vect[t_vect.size()-1];
-  for(double i = T/2.0+period; i<=T; i +=period)
+  for(double i = t_rise/2.0+period; i<=t_rise; i +=period)
     t_vect.push_back(i);
   
   int nb_rise_convexe = t_vect.size();
@@ -58,8 +55,10 @@ int main(int argc, char** argv){
   // CRUISE
   double ts = t_vect[t_vect.size()-1];
   double ss = q_vect[t_vect.size()-1];
-  double time_left = (qf - ss)/v_max;
-  for(double i = T+period; i<=T+time_left; i +=period)
+  double t_fall = 2*std::sqrt((v_max-qdf)/j_max);;
+  double breaking_distance = (v_max*v_max - qdf*qdf)*2/t_fall /j_max;
+  double time_left = (qf - ss - breaking_distance)/v_max ;
+  for(double i = t_rise+period; i<=t_rise+time_left; i +=period)
     t_vect.push_back(i);
   
   int nb_cruise = t_vect.size();
@@ -72,14 +71,43 @@ int main(int argc, char** argv){
     q_vect.push_back(ss+v_max*current_t);
   }
   
+  // FALL CONVEXE
+  for(double i = t_rise+time_left+period; i<=t_rise+time_left+t_fall/2.0; i +=period)
+    t_vect.push_back(i);
+  int nb_fall_convexe = t_vect.size();
+  
+  for(int i=nb_cruise; i<nb_fall_convexe;i++){
+    current_t = t_vect[i] - t_rise - time_left;
+    j_vect.push_back(-j_max);
+    a_vect.push_back(- j_max*current_t);
+    v_vect.push_back(v_max - j_max*current_t*current_t/2.0);
+    q_vect.push_back(qf- breaking_distance+v_max*current_t-j_max/6.0*current_t*current_t*current_t);
+  }
+  
+  // FALL CONCAVE
+  am = a_vect[t_vect.size()-1];
+  vh = v_vect[t_vect.size()-1];
+  sh = q_vect[t_vect.size()-1];
+  for(double i = t_rise+time_left+t_fall/2.0+period; i<=t_rise+time_left+t_fall; i +=period)
+    t_vect.push_back(i);
+  int nb_fall_concave = t_vect.size();
+  
+  for(int i=nb_fall_convexe; i<nb_fall_concave;i++){
+    current_t = t_vect[i] - t_rise - time_left - t_fall/2.0;
+    j_vect.push_back(j_max);
+    a_vect.push_back(am + j_max*current_t);
+    v_vect.push_back(vh + am*current_t + j_max*current_t*current_t/2.0);
+    q_vect.push_back(sh+vh*current_t+ am/2.0*current_t*current_t+j_max/6.0*current_t*current_t*current_t);
+  }
+
   // Plot
-  curves_plot(t_vect, q_vect, v_vect, a_vect, j_vect, T);
+  curves_plot(t_vect, q_vect, v_vect, a_vect, j_vect, t_rise);
 
   ros::shutdown();
   return 1;
 }
 
-void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::vector<double>& v_vect, std::vector<double>& a_vect, std::vector<double>& j_vect, double T){
+void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::vector<double>& v_vect, std::vector<double>& a_vect, std::vector<double>& j_vect, double t_rise){
   
   std::vector<double> line_t, line_val;
   
@@ -88,15 +116,15 @@ void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::
   plt::plot(t_vect, q_vect);
   plt::ylabel("position");
   line_t.clear();
-  line_t.push_back(T/2.0);
-  line_t.push_back(T/2.0);
+  line_t.push_back(t_rise/2.0);
+  line_t.push_back(t_rise/2.0);
   line_val.clear();
   line_val.push_back(0);
   line_val.push_back(qf);
   plt::plot(line_t, line_val,"r--");
   line_t.clear();
-  line_t.push_back(T);
-  line_t.push_back(T);
+  line_t.push_back(t_rise);
+  line_t.push_back(t_rise);
   line_val.clear();
   line_val.push_back(0);
   line_val.push_back(qf);
@@ -107,15 +135,15 @@ void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::
   plt::plot(t_vect, v_vect);
   plt::ylabel("velocity");
   line_t.clear();
-  line_t.push_back(T/2.0);
-  line_t.push_back(T/2.0);
+  line_t.push_back(t_rise/2.0);
+  line_t.push_back(t_rise/2.0);
   line_val.clear();
   line_val.push_back(0);
   line_val.push_back(v_max);
   plt::plot(line_t, line_val,"r--");
   line_t.clear();
-  line_t.push_back(T);
-  line_t.push_back(T);
+  line_t.push_back(t_rise);
+  line_t.push_back(t_rise);
   line_val.clear();
   line_val.push_back(0);
   line_val.push_back(v_max);
@@ -126,18 +154,18 @@ void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::
   plt::plot(t_vect, a_vect);
   plt::ylabel("acceleration");
   line_t.clear();
-  line_t.push_back(T/2.0);
-  line_t.push_back(T/2.0);
+  line_t.push_back(t_rise/2.0);
+  line_t.push_back(t_rise/2.0);
   line_val.clear();
   line_val.push_back(0);
-  line_val.push_back(j_max*T/2.0);
+  line_val.push_back(j_max*t_rise/2.0);
   plt::plot(line_t, line_val,"r--");
   line_t.clear();
-  line_t.push_back(T);
-  line_t.push_back(T);
+  line_t.push_back(t_rise);
+  line_t.push_back(t_rise);
   line_val.clear();
   line_val.push_back(0);
-  line_val.push_back(j_max*T/2.0);
+  line_val.push_back(j_max*t_rise/2.0);
   plt::plot(line_t, line_val,"r--");
   
   // Plot jerk
@@ -145,15 +173,15 @@ void curves_plot(std::vector<double>& t_vect, std::vector<double>& q_vect, std::
   plt::plot(t_vect, j_vect);
   plt::ylabel("jerk");
   line_t.clear();
-  line_t.push_back(T/2.0);
-  line_t.push_back(T/2.0);
+  line_t.push_back(t_rise/2.0);
+  line_t.push_back(t_rise/2.0);
   line_val.clear();
   line_val.push_back(-j_max);
   line_val.push_back(j_max);
   plt::plot(line_t, line_val,"r--");
   line_t.clear();
-  line_t.push_back(T);
-  line_t.push_back(T);
+  line_t.push_back(t_rise);
+  line_t.push_back(t_rise);
   line_val.clear();
   line_val.push_back(-j_max);
   line_val.push_back(j_max);
