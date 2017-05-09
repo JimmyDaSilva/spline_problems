@@ -61,16 +61,22 @@ void AdaptiveSCurveProfile::compute_curves(){
     }
     else{
       // TODO
-      std::cerr << "ramp rise time is negative" << std::endl;
-      d_cruise = d_cruise - compute_concave_distance(0,0,0) - compute_convexe_distance(0,0,0);
+      std::cerr << "No ramp rise" << std::endl;
+      t_ramp_rise = 0;
+      t_concave_rise = std::sqrt((v_max_-vi_)/j_max_);
+      t_convexe_rise = std::sqrt((v_max_-vi_)/j_max_);
+      d_cruise = d_cruise - compute_concave_distance(ai_,vi_,ai_+j_max_*t_concave_rise) - compute_convexe_distance(ai_+j_max_*t_concave_rise, vi_+ai_*t_concave_rise+j_max_/2*t_concave_rise*t_concave_rise,0);
     }
     if(t_ramp_fall > 0){
       d_cruise = d_cruise - compute_convexe_distance(0, v_max_, -a_max_) - compute_ramp_fall_distance(v_max_-j_max_/2*t_convexe_fall*t_convexe_fall,v_max_,vf_,0,-a_max_,af_) - compute_concave_distance(-a_max_,v_max_-j_max_/2*t_convexe_fall*t_convexe_fall-t_ramp_fall*a_max_, af_) ;
     }
     else{
       // TODO
-      std::cerr << "ramp fall time is negative" << std::endl;
-      d_cruise =  d_cruise - compute_convexe_distance(0,0,0) - compute_concave_distance(0,0,0);
+      std::cerr << "No ramp fall" << std::endl;
+      t_ramp_fall = 0;
+      t_convexe_fall = std::sqrt((v_max_-vf_)/j_max_);
+      t_concave_fall = std::sqrt((v_max_-vf_)/j_max_);
+      d_cruise =  d_cruise - compute_convexe_distance(0,v_max_,-j_max_*t_convexe_fall) - compute_concave_distance(-j_max_*t_convexe_fall,v_max_-j_max_/2*t_convexe_fall*t_convexe_fall,af_);
     }
     double t_cruise = d_cruise/v_max_;
     
@@ -102,6 +108,13 @@ void AdaptiveSCurveProfile::compute_curves(){
       // TODO
       std::cerr << "cruise time is negative" << std::endl;
     }
+    std::cout<<"Concave rise time : " << t_concave_rise<<std::endl;
+    std::cout<<"Ramp rise time : " << t_ramp_rise<<std::endl;
+    std::cout<<"Convexe rise time : " << t_convexe_rise<<std::endl;
+    std::cout<<"Cruise time : " << t_cruise<<std::endl;
+    std::cout<<"Convexe fall time : " << t_convexe_fall<<std::endl;
+    std::cout<<"Ramp fall time : " << t_ramp_fall<<std::endl;
+    std::cout<<"Concave fall time : " << t_concave_fall<<std::endl;
   }
   else{
     // TODO Change ramp computation time in case ramp does not start or end at -+amax
@@ -261,7 +274,7 @@ int main(int argc, char** argv){
   ros::init(argc, argv, "adaptive_s_curve_profile");
   ros::NodeHandle nh;
   
-  AdaptiveSCurveProfile s_curve(0, 1.2, -1, 2, 0.5, 2, 1, 2, 30);
+  AdaptiveSCurveProfile s_curve(0, 0, 0, 2.5, 0, 0, 1, 2, 3);
   s_curve.set_period(0.00001);
   s_curve.compute_curves();
   s_curve.plot_curves();
