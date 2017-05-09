@@ -28,10 +28,10 @@ class AdaptiveSCurveProfile{
     double compute_concave_time(double phase_acc_start, double phase_acc_final);
     double compute_convexe_distance(double phase_acc_start, double phase_vel_start, double phase_acc_final);
     double compute_convexe_time(double phase_acc_start, double phase_acc_final);
-    double compute_ramp_rise_distance(double phase_vel_start, double rise_vel_start, double rise_vel_final, double rise_acc_start);
-    double compute_ramp_rise_time(double rise_vel_start, double rise_acc_start, double rise_vel_final);
-    double compute_ramp_fall_distance(double phase_vel_start, double rise_vel_start, double rise_vel_final, double rise_acc_final);
-    double compute_ramp_fall_time(double rise_vel_start, double rise_acc_final, double rise_vel_final);
+    double compute_ramp_rise_distance(double phase_vel_start, double rise_vel_start, double rise_vel_final, double rise_acc_start, double rise_acc, double rise_acc_final);
+    double compute_ramp_rise_time(double rise_vel_start, double rise_vel_final, double rise_acc_start, double rise_acc, double rise_acc_final );
+    double compute_ramp_fall_distance(double phase_vel_start, double fall_vel_start, double fall_vel_final, double fall_acc_start, double fall_acc, double fall_acc_final);
+    double compute_ramp_fall_time(double fall_vel_start, double fall_vel_final ,double fall_acc_start, double fall_acc, double fall_acc_final );
     double compute_cruise_distance(double cruise_vel, double phase_pos_start, double phase_pos_final);
     double compute_cruise_time(double cruise_vel, double phase_pos_start, double phase_pos_final);
   
