@@ -63,8 +63,10 @@ void AdaptiveSCurveProfile::compute_curves(){
       // TODO
       std::cerr << "No ramp rise" << std::endl;
       t_ramp_rise = 0;
-      t_concave_rise = std::sqrt((v_max_-vi_)/j_max_);
-      t_convexe_rise = std::sqrt((v_max_-vi_)/j_max_);
+//       t_concave_rise = (-ai_+ std::sqrt(2*ai_*ai_+4*(v_max_-vi_)*j_max_))/(2*j_max_); //std::sqrt((v_max_-vi_)/j_max_);
+      double T = (-ai_+ std::sqrt(2*ai_*ai_+4*(v_max_-vi_)*j_max_))/j_max_;
+      t_concave_rise = (j_max_ * T - ai_)/(2*j_max_);
+      t_convexe_rise = T-t_concave_rise;
       d_cruise = d_cruise - compute_concave_distance(ai_,vi_,ai_+j_max_*t_concave_rise) - compute_convexe_distance(ai_+j_max_*t_concave_rise, vi_+ai_*t_concave_rise+j_max_/2*t_concave_rise*t_concave_rise,0);
     }
     if(t_ramp_fall > 0){
@@ -274,7 +276,7 @@ int main(int argc, char** argv){
   ros::init(argc, argv, "adaptive_s_curve_profile");
   ros::NodeHandle nh;
   
-  AdaptiveSCurveProfile s_curve(0, 0, 0, 2.5, 0, 0, 1, 2, 3);
+  AdaptiveSCurveProfile s_curve(0, 0.3, 1, 2.5, 0, 0, 1, 2, 3);
   s_curve.set_period(0.00001);
   s_curve.compute_curves();
   s_curve.plot_curves();
