@@ -17,6 +17,18 @@ AdaptiveSCurveProfile::AdaptiveSCurveProfile() {
   AdaptiveSCurveProfile(0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 1.0, 2.0, 5.0);
 }
 
+void AdaptiveSCurveProfile::config (double s_init, double vi_init, double a_init, double s_final, double v_final, double a_final, double v_max, double a_max, double j_max) {
+  si_ = s_init;
+  sf_ = s_final;
+  vi_ = vi_init;
+  vf_ = v_final;
+  ai_ = a_init;
+  af_ = a_final;
+  v_max_ = v_max;
+  a_max_ = a_max;
+  j_max_ = j_max;
+  period_ = 0.0001;
+}
 void AdaptiveSCurveProfile::set_period ( double period ) {
   period_ = period;
 }
@@ -47,7 +59,7 @@ void AdaptiveSCurveProfile::compute_curves(){
     af_ = std::max(af_, -a_max_);
   
   // If initial velocity is smaller than max vel
-  if(vi_ <= v_max_){
+  if(vi_+ai_*ai_/(2*j_max_) <= v_max_){
     double t_ramp_rise = compute_ramp_rise_time(vi_,v_max_, ai_, a_max_, 0);
     double t_concave_rise = compute_concave_time(ai_,a_max_);
     double t_convexe_rise = compute_convexe_time(a_max_, 0);
@@ -60,24 +72,24 @@ void AdaptiveSCurveProfile::compute_curves(){
       d_cruise = d_cruise - compute_concave_distance(ai_, vi_, a_max_) - compute_ramp_rise_distance(vi_+ai_*t_concave_rise+j_max_/2*t_concave_rise*t_concave_rise,vi_, v_max_, ai_, a_max_, 0) - compute_convexe_distance(a_max_, vi_+ai_*t_concave_rise+j_max_/2*t_concave_rise*t_concave_rise+t_ramp_rise*a_max_, 0);
     }
     else{
-      // TODO
-      std::cerr << "No ramp rise" << std::endl;
       t_ramp_rise = 0;
-//       t_concave_rise = (-ai_+ std::sqrt(2*ai_*ai_+4*(v_max_-vi_)*j_max_))/(2*j_max_); //std::sqrt((v_max_-vi_)/j_max_);
       double T = (-ai_+ std::sqrt(2*ai_*ai_+4*(v_max_-vi_)*j_max_))/j_max_;
       t_concave_rise = (j_max_ * T - ai_)/(2*j_max_);
       t_convexe_rise = T-t_concave_rise;
+      if(t_concave_rise<0)
+        t_concave_rise = 0;
       d_cruise = d_cruise - compute_concave_distance(ai_,vi_,ai_+j_max_*t_concave_rise) - compute_convexe_distance(ai_+j_max_*t_concave_rise, vi_+ai_*t_concave_rise+j_max_/2*t_concave_rise*t_concave_rise,0);
     }
     if(t_ramp_fall > 0){
       d_cruise = d_cruise - compute_convexe_distance(0, v_max_, -a_max_) - compute_ramp_fall_distance(v_max_-j_max_/2*t_convexe_fall*t_convexe_fall,v_max_,vf_,0,-a_max_,af_) - compute_concave_distance(-a_max_,v_max_-j_max_/2*t_convexe_fall*t_convexe_fall-t_ramp_fall*a_max_, af_) ;
     }
     else{
-      // TODO
-      std::cerr << "No ramp fall" << std::endl;
       t_ramp_fall = 0;
-      t_convexe_fall = std::sqrt((v_max_-vf_)/j_max_);
-      t_concave_fall = std::sqrt((v_max_-vf_)/j_max_);
+      double T = (af_+ std::sqrt(2*af_*af_+4*(v_max_-vf_)*j_max_))/j_max_;
+      t_concave_fall = (j_max_*T +af_)/(2*j_max_);
+      if(t_concave_fall<0)
+        t_concave_fall = 0;
+      t_convexe_fall = T - t_concave_fall;
       d_cruise =  d_cruise - compute_convexe_distance(0,v_max_,-j_max_*t_convexe_fall) - compute_concave_distance(-j_max_*t_convexe_fall,v_max_-j_max_/2*t_convexe_fall*t_convexe_fall,af_);
     }
     double t_cruise = d_cruise/v_max_;
@@ -109,6 +121,7 @@ void AdaptiveSCurveProfile::compute_curves(){
     else{
       // TODO
       std::cerr << "cruise time is negative" << std::endl;
+      t_cruise = 0.0;
     }
     std::cout<<"Concave rise time : " << t_concave_rise<<std::endl;
     std::cout<<"Ramp rise time : " << t_ramp_rise<<std::endl;
@@ -119,7 +132,6 @@ void AdaptiveSCurveProfile::compute_curves(){
     std::cout<<"Concave fall time : " << t_concave_fall<<std::endl;
   }
   else{
-    // TODO Change ramp computation time in case ramp does not start or end at -+amax
     double t_ramp_fall1 = compute_ramp_fall_time(vi_, v_max_ ,ai_, -a_max_, 0);
     double t_convexe_fall1 = compute_convexe_time(ai_,-a_max_); 
     double t_concave_fall1 = compute_concave_time(-a_max_, 0);
@@ -132,17 +144,19 @@ void AdaptiveSCurveProfile::compute_curves(){
       d_cruise = d_cruise - compute_convexe_distance(ai_, vi_, -a_max_) - compute_ramp_fall_distance(vi_+ai_*t_convexe_fall1-j_max_/2*t_convexe_fall1*t_convexe_fall1,vi_, v_max_, ai_, -a_max_, 0) - compute_concave_distance(-a_max_, vi_+ai_*t_convexe_fall1-j_max_/2*t_convexe_fall1*t_convexe_fall1-t_ramp_fall1*a_max_, 0);
     }
     else{
-      // TODO
-      std::cerr << "ramp fall 1 time is negative" << std::endl;
-      d_cruise = d_cruise - compute_concave_distance(0,0,0) - compute_convexe_distance(0,0,0);
+      double T = (ai_+ std::sqrt(2*ai_*ai_+4*(vi_-v_max_)*j_max_))/j_max_;
+      t_convexe_fall1 = (j_max_*T +ai_)/(2*j_max_);
+      t_concave_fall1 = T - t_convexe_fall1;
+      d_cruise = d_cruise - compute_convexe_distance(ai_,vi_,ai_-j_max_*t_convexe_fall1) - compute_concave_distance(ai_-j_max_*t_convexe_fall1,vi_+ai_*t_convexe_fall1-j_max_/2*t_convexe_fall1*t_convexe_fall1,0);
     }
     if(t_ramp_fall2 > 0){
       d_cruise = d_cruise - compute_convexe_distance(0, v_max_, -a_max_) - compute_ramp_fall_distance(v_max_-j_max_/2*t_convexe_fall2*t_convexe_fall2,v_max_,vf_,0, -a_max_, af_) - compute_concave_distance(-a_max_,v_max_-j_max_/2*t_convexe_fall2*t_convexe_fall2-t_ramp_fall2*a_max_, af_) ;
     }
     else{
-      // TODO
-      std::cerr << "ramp fall 2 time is negative" << std::endl;
-      d_cruise =  d_cruise - compute_convexe_distance(0,0,0) - compute_concave_distance(0,0,0);
+      double T = (af_+ std::sqrt(2*af_*af_+4*(v_max_-vf_)*j_max_))/j_max_;
+      t_concave_fall2 = (j_max_*T +af_)/(2*j_max_);
+      t_convexe_fall2 = T - t_concave_fall2;
+      d_cruise = d_cruise - compute_convexe_distance(0,v_max_,-j_max_*t_convexe_fall2) - compute_concave_distance(-j_max_*t_convexe_fall2,v_max_-j_max_/2*t_convexe_fall2*t_convexe_fall2,af_);
     }
     double t_cruise = d_cruise/v_max_;
     
@@ -173,6 +187,7 @@ void AdaptiveSCurveProfile::compute_curves(){
     else{
       // TODO
       std::cerr << "cruise time is negative" << std::endl;
+      t_cruise = 0.0;
     }
     
     std::cout<<"Convexe fall 1 time : " << t_convexe_fall1<<std::endl;
@@ -276,7 +291,11 @@ int main(int argc, char** argv){
   ros::init(argc, argv, "adaptive_s_curve_profile");
   ros::NodeHandle nh;
   
-  AdaptiveSCurveProfile s_curve(0, 0.3, 1, 2.5, 0, 0, 1, 2, 3);
+  AdaptiveSCurveProfile s_curve(0, 0.5, 0.2, 2.5, .5, 0.5, 1, 2, 5);
+  s_curve.set_period(0.00001);
+  s_curve.compute_curves();
+  s_curve.plot_curves();
+  s_curve.config(0, 0.5, 0.2, 2.5, .5, 0.5, 1, 2, 100);
   s_curve.set_period(0.00001);
   s_curve.compute_curves();
   s_curve.plot_curves();

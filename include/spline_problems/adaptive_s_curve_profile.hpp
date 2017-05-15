@@ -15,6 +15,9 @@ class AdaptiveSCurveProfile{
     // constructor with initial parameters
     AdaptiveSCurveProfile(double s_init, double vi_init, double a_init, double s_final, double v_final, double a_final, double v_max, double a_max, double j_max);
     
+    // change configuration
+    void config (double s_init, double vi_init, double a_init, double s_final, double v_final, double a_final, double v_max, double a_max, double j_max);
+    
     // config period
     void set_period ( double period );
     
