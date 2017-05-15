@@ -39,6 +39,7 @@ include_directories(
 add_executable(min_jerk src/min_jerk.cpp)
 add_executable(tri_acc_profile src/tri_acc_profile.cpp)
 add_executable(adaptive_s_curve_profile src/adaptive_s_curve_profile.cpp)
+add_executable(easy_s_curve src/easy_s_curve.cpp)
 
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
@@ -46,3 +47,4 @@ add_executable(adaptive_s_curve_profile src/adaptive_s_curve_profile.cpp)
 target_link_libraries(min_jerk ${catkin_LIBRARIES} -lpython2.7)
 target_link_libraries(tri_acc_profile ${catkin_LIBRARIES} -lpython2.7)
 target_link_libraries(adaptive_s_curve_profile ${catkin_LIBRARIES} -lpython2.7)
+target_link_libraries(easy_s_curve ${catkin_LIBRARIES} -lpython2.7)
