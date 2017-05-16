@@ -24,10 +24,24 @@ void EasySCurveProfile::config (double s_init, double vi_init, double a_init, do
   vf_ = v_final;
   ai_ = a_init;
   af_ = a_final;
-  v_max_ = v_max;
-  a_max_ = a_max;
-  j_max_ = j_max;
   period_ = 0.001;
+  
+  // Max vel acc and jerk need to be positive
+  v_max_ = std::abs(v_max);
+  a_max_ = std::abs(a_max);
+  j_max_ = std::abs(j_max);
+  
+  // vf cannot be over vmax or below -vmax
+  if (vf_>0)
+    vf_ = std::min(vf_, v_max_);
+  else
+    vf_ = std::max(vf_, -v_max_);
+  
+  // af cannot be over amax or below -amax
+  if (af_>0)
+    af_ = std::min(af_, a_max_);
+  else
+    af_ = std::max(af_, -a_max_);
 }
 
 void EasySCurveProfile::set_period ( double period ) {
@@ -46,19 +60,6 @@ void EasySCurveProfile::compute_curves(){
   s_vect_.push_back(si_);
   t_vect_.clear();
   t_vect_.push_back(0.0);
-
-  // vf cannot be over vmax or below -vmax
-  if (vf_>0)
-    vf_ = std::min(vf_, v_max_);
-  else
-    vf_ = std::max(vf_, -v_max_);
-  
-  // af cannot be over amax or below -amax
-  if (af_>0)
-    af_ = std::min(af_, a_max_);
-  else
-    af_ = std::max(af_, -a_max_);
-  
   
   double distance_left = sf_-si_;
   compute_breaking();
@@ -139,7 +140,7 @@ void EasySCurveProfile::compute_curves(){
   std::cout << "break distance is : " <<break_dist_ <<std::endl;
   
   while(t_vect_[t_vect_.size()-1] <=t_final){
-    if (vf_ >= v_vect_[v_vect_.size()-1] + (af_*af_-a_vect_[a_vect_.size()-1]*a_vect_[a_vect_.size()-1])/(2*j_max_))
+    if ((vf_ >= v_vect_[v_vect_.size()-1] + (af_*af_-a_vect_[a_vect_.size()-1]*a_vect_[a_vect_.size()-1])/(2*j_max_)) && (a_vect_[a_vect_.size()-1]<0))
       compute_next_step(j_max_);
     else{
       if (a_vect_[a_vect_.size()-1] > -a_max_)
